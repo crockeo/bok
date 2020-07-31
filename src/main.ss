@@ -1,12 +1,31 @@
-;; -*- geiser-scheme-implementation: chicken -*-
+;; -*- geiser-scheme-implementation: 'chicken -*-
 
 (import
   (chicken io)
   (chicken process signal)
 
+  matchable
   ncurses
 
   srfi-69)
+
+(define (curry--single function arg)
+  (lambda rest
+    (apply function arg rest)))
+
+(define (curry--internal function args)
+  (if (null? args)
+      function
+      (curry--internal (curry--single function (car args)) (cdr args))))
+
+(define (curry function . args)
+  "Partially applies a function, and returns a function with those arguments applied."
+  (curry--internal function args))
+
+(define (add-vec2 v1 v2)
+  "Adds two 2-dim lists together."
+  (match `(,v1 ,v2)
+    [((x1 y1) (x2 y2)) `(,(+ x1 x2) ,(+ y1 y2))]))
 
 (define (prepare-ncurses)
   (initscr)
@@ -30,19 +49,50 @@
                    axis
                    (lambda (value) (max (+ value direction) 0))))
 
-(define (update-game-state game-state input)
-  (cond
-   [(equal? input #\w) (game-state-move game-state 'x -1)]
-   [(equal? input #\s) (game-state-move game-state 'x 1)]
-   [(equal? input #\a) (game-state-move game-state 'y -1)]
-   [(equal? input #\d) (game-state-move game-state 'y 1)]))
+(define (input-direction input)
+  "Maps an input, in the form of WASD, to a game action, in the form of translation."
+  (match input
+    [#\w '(0 -1)]
+    [#\s '(0 1)]
+    [#\a '(-1 0)]
+    [#\d '(1 0)]
+    [else '(0 0)]))
+
+(define (game-state-get-pos game-state)
+  "Get the current position according to the game state."
+  (map (curry hash-table-ref game-state)
+       '(x y)))
+
+(define (game-state-set-pos game-state xy)
+  "Set the current position according to the game state."
+  (match xy
+    [(x y)
+     (map (curry apply hash-table-set! game-state)
+          `((x ,x)
+            (y ,y)))]))
+
+(define (game-state-update game-state input)
+  (game-state-set-pos game-state
+   (add-vec2 (game-state-get-pos game-state)
+             (input-direction input))))
+
+(let ([game-state (new-game-state)])
+  (game-state-update game-state #\d)
+  (game-state-get-pos game-state))
+
+(define (print-sorry window)
+  (wclear window)
+  (mvaddstr 0 0 "sorry, an error occurred")
+  (wrefresh window)
+  (getch))
 
 (define (render window game-state)
   (wclear window)
   (mvwaddch window
-            (hash-table-ref game-state 'x)
             (hash-table-ref game-state 'y)
-            #\q)
+            (hash-table-ref game-state 'x)
+            #\#)
+  (curs_set 0)
   (wrefresh window))
 
 (define (loop window game-state)
@@ -51,14 +101,19 @@
     (unless (equal? input #\q)
       ;; TODO: do bounds checking to make sure that we're not accidentally writing off of the
       ;;       screen
-      (update-game-state game-state input)
+      (game-state-update game-state input)
       (loop window game-state))))
 
 (define (main)
   (set-signal-handler! signal/int handle-sigint)
 
   (prepare-ncurses)
-  (loop (stdscr) (new-game-state))
+
+  (let ([window (stdscr)])
+   (condition-case (loop window (new-game-state))
+     [(exn) (print-sorry window)]
+     [var () #f]))
+
   (destroy-ncurses))
 
 (main)
