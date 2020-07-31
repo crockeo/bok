@@ -9,12 +9,10 @@
 
   srfi-69)
 
+(include "src/math.ss")
 (include "src/util.ss")
 
-(define (add-vec2 v1 v2)
-  "Adds two 2-dim lists together."
-  (match `(,v1 ,v2)
-    [((x1 y1) (x2 y2)) `(,(+ x1 x2) ,(+ y1 y2))]))
+(define PLAYER-CHARACTER #\@)
 
 (define (prepare-ncurses)
   (initscr)
@@ -80,7 +78,7 @@
   (mvwaddch window
             (hash-table-ref game-state 'y)
             (hash-table-ref game-state 'x)
-            #\#)
+            PLAYER-CHARACTER)
   (curs_set 0)
   (wrefresh window))
 
