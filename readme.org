@@ -1,0 +1,7 @@
+* bok
+
+A roguelike(?) in [[http://wiki.call-cc.org/][Chicken Scheme]], using their R5RS scheme implementation.
+
+** License
+
+Refer to {LICENSE} file, but hint: it's MIT Open Source Licensed.
