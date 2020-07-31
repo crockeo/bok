@@ -22,7 +22,7 @@
 
 (define (loop window)
   (let ([input (getch)])
-    (unless (equal? input 113)
+    (unless (equal? input #\q)
       (render window input)
       (loop window))))
 
