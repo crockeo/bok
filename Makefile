@@ -2,7 +2,7 @@
 
 
 default:
-	csc src/*.ss -o bok
+	csc src/main.ss -o bok
 
 run: default
 	./bok

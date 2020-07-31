@@ -9,18 +9,7 @@
 
   srfi-69)
 
-(define (curry--single function arg)
-  (lambda rest
-    (apply function arg rest)))
-
-(define (curry--internal function args)
-  (if (null? args)
-      function
-      (curry--internal (curry--single function (car args)) (cdr args))))
-
-(define (curry function . args)
-  "Partially applies a function, and returns a function with those arguments applied."
-  (curry--internal function args))
+(include "src/util.ss")
 
 (define (add-vec2 v1 v2)
   "Adds two 2-dim lists together."
