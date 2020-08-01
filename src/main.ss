@@ -14,6 +14,29 @@
 
 (define PLAYER-CHARACTER #\@)
 
+(define-class player (x y)
+  (define (repr)
+    "Returns a useful representation of the player, used to debug."
+    (list x y))
+
+  (define (render window)
+    "Renders the player onto the screen."
+    (mvaddch window y x PLAYER-CHARACTER))
+
+  (define (translate dx dy)
+    "Translates the player by the provided input."
+    (make-player (+ x dx)
+                 (+ y dy)))
+
+  (define (translate-from-input input)
+    "Translates a player from the provided input, rather than from a dx/dy pair."
+    (apply translate
+           (match input
+             [#\w '(0 -1)]
+             [#\s '(0, 1)]
+             [#\a '(-1 0)]
+             [#\d '(1 0)]))))
+
 (define (prepare-ncurses)
   (initscr)
   (cbreak))
@@ -25,60 +48,15 @@
   (destroy-ncurses)
   (exit 0))
 
-(define (new-game-state)
-  (let ([game-state (make-hash-table)])
-    (hash-table-set! game-state 'x 0)
-    (hash-table-set! game-state 'y 0)
-    game-state))
-
-(define (game-state-move game-state axis direction)
-  (hash-table-update! game-state
-                   axis
-                   (lambda (value) (max (+ value direction) 0))))
-
-(define (input-direction input)
-  "Maps an input, in the form of WASD, to a game action, in the form of translation."
-  (match input
-    [#\w '(0 -1)]
-    [#\s '(0 1)]
-    [#\a '(-1 0)]
-    [#\d '(1 0)]
-    [else '(0 0)]))
-
-(define (game-state-get-pos game-state)
-  "Get the current position according to the game state."
-  (map (curry hash-table-ref game-state)
-       '(x y)))
-
-(define (game-state-set-pos game-state xy)
-  "Set the current position according to the game state."
-  (match xy
-    [(x y)
-     (map (curry apply hash-table-set! game-state)
-          `((x ,x)
-            (y ,y)))]))
-
-(define (game-state-update game-state input)
-  (game-state-set-pos game-state
-   (add-vec2 (game-state-get-pos game-state)
-             (input-direction input))))
-
-(let ([game-state (new-game-state)])
-  (game-state-update game-state #\d)
-  (game-state-get-pos game-state))
-
 (define (print-sorry window)
   (wclear window)
   (mvaddstr 0 0 "sorry, an error occurred")
   (wrefresh window)
   (getch))
 
-(define (render window game-state)
+(define (render window player)
   (wclear window)
-  (mvwaddch window
-            (hash-table-ref game-state 'y)
-            (hash-table-ref game-state 'x)
-            PLAYER-CHARACTER)
+  (player 'render)
   (curs_set 0)
   (wrefresh window))
 
@@ -86,10 +64,7 @@
   (render window game-state)
   (let ([input (getch)])
     (unless (equal? input #\q)
-      ;; TODO: do bounds checking to make sure that we're not accidentally writing off of the
-      ;;       screen
-      (game-state-update game-state input)
-      (loop window game-state))))
+      (loop window (player 'translate-from-input input)))))
 
 (define (main)
   (set-signal-handler! signal/int handle-sigint)
