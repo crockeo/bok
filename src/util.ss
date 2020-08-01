@@ -11,6 +11,15 @@
                (apply function (car args) rest))
              (cdr args))))
 
+(define (range min max)
+  "Generates a range of numbers from [min, max). I.e. min inclusive to max exclusive."
+  (let loop ([i min]
+             [agg '()])
+    (if (equal? i max)
+        agg
+        (loop (+ i 1)
+              (append agg (list i))))))
+
 (begin-for-syntax
  (define (string-join delimiter . strings)
    "Joins a series of strings with a given delimiter."

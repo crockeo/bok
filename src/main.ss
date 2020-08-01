@@ -14,32 +14,9 @@
 
 (include "src/math.ss")
 (include "src/util.ss")
+(include "src/state.ss")
 
 (define PLAYER-CHARACTER #\@)
-
-(define-class player (x y)
-  (define (repr)
-    "Returns a useful representation of the player, used to debug."
-    (list x y))
-
-  (define (render window)
-    "Renders the player onto the screen."
-    (mvwaddch window y x PLAYER-CHARACTER))
-
-  (define (translate dx dy)
-    "Translates the player by the provided input."
-    (make-player (+ x dx)
-                 (+ y dy)))
-
-  (define (translate-from-input input)
-    "Translates a player from the provided input, rather than from a dx/dy pair."
-    (apply translate
-           (match input
-             [#\w '(0 -1)]
-             [#\s '(0 1)]
-             [#\a '(-1 0)]
-             [#\d '(1 0)]
-             [else '(0 0)]))))
 
 (define (prepare-ncurses)
   (initscr)
@@ -83,17 +60,17 @@
   (destroy-ncurses)
   (exit 0))
 
-(define (render window player)
+(define (render window state)
   (wclear window)
-  (player 'render window)
+  (state 'render window)
   (curs_set 0)
   (wrefresh window))
 
-(define (loop window player)
-  (render window player)
+(define (loop window state)
+  (render window state)
   (let ([input (getch)])
     (unless (equal? input #\q)
-      (loop window (player 'translate-from-input input)))))
+      (loop window (state 'update input)))))
 
 (define (main)
   (set-signal-handler! signal/int handle-sigint)
@@ -101,12 +78,15 @@
   (prepare-ncurses)
 
   (define window (stdscr))
+  (define menu (make-menu-state '("Play"
+                                  "Credits"
+                                  "Exit") 0))
 
   (call/cc
    (lambda (k)
      (with-exception-handler
          (curry handle-exn-ncurses k window)
-       (lambda () (loop window (make-player 0 0))))))
+       (lambda () (loop window menu)))))
 
   (destroy-ncurses))
 
