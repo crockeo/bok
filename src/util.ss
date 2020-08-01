@@ -9,45 +9,51 @@
                (apply function (car args) rest))
              (cdr args))))
 
-(define (join-symbols . symbols)
-  "When provided a list of symbols (provided as arguments), this function concatenates them together
-into one, long symbol using the standard-multiword-symbol-form."
-  (string->symbol
-   (let loop [(symbols (cdr symbols))
-              (str (symbol->string (car symbols)))]
-     (if (null? symbols)
+(begin-for-syntax
+ (define (string-join delimiter . strings)
+   "Joins a series of strings with a given delimiter."
+   (let loop [(strings (cdr strings))
+              (str (car strings))]
+     (if (null? strings)
          str
-         (loop (cdr symbols)
-               (string-append str "-" (symbol->string (car symbols))))))))
+         (loop (cdr strings)
+               (string-append str delimiter (car strings))))))
 
-(define (nth list n)
-  "Retrieves the nth item of a list."
-  (cond
-   [(null? list) list]
-   [(equal? n 0) (car list)]
-   [else (nth (cdr list) (- n 1))]))
+ (define (join-symbols . symbols)
+   "When provided a list of symbols (provided as arguments), this function concatenates them together
+into one, long symbol using the standard-multiword-symbol-form."
+   (string->symbol
+    (apply string-join "-"
+           (map symbol->string symbols))))
 
-(define (nths list . ns)
-  "Retrieves the nth item of an embedded list. Each provided index scopes into a list. E.g. given
+ (define (nth list n)
+   "Retrieves the nth item of a list."
+   (cond
+    [(null? list) list]
+    [(equal? n 0) (car list)]
+    [else (nth (cdr list) (- n 1))]))
+
+ (define (nths list . ns)
+   "Retrieves the nth item of an embedded list. Each provided index scopes into a list. E.g. given
 (nths '((1 2 3) 4 5) 0 1) -> 2"
-  (if (null? ns)
-      list
-      (apply nths (nth list (car ns)) (cdr ns))))
+   (if (null? ns)
+       list
+       (apply nths (nth list (car ns)) (cdr ns))))
 
-(define (drop list n)
-  "Drops the first n values of a list."
-  (cond
-   [(null? list) list]
-   [(equal? n 0) list]
-   [else (drop (cdr list) (- n 1))]))
+ (define (drop list n)
+   "Drops the first n values of a list."
+   (cond
+    [(null? list) list]
+    [(equal? n 0) list]
+    [else (drop (cdr list) (- n 1))]))
 
 
-(define (get-function-names defines)
-  "Given a collection of valid function definitions, this returns the (symbol) names of each of
+ (define (get-function-names defines)
+   "Given a collection of valid function definitions, this returns the (symbol) names of each of
 those functions."
-  (map
-   (lambda (define) (nths define 1 0))
-   defines))
+   (map
+    (lambda (define) (nths define 1 0))
+    defines)))
 
 (define-syntax define-class
   ;; Defines a class.

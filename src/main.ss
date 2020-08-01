@@ -3,10 +3,12 @@
 (import
   (chicken io)
   (chicken process signal)
+  (chicken string)
 
   matchable
   ncurses
 
+  srfi-12
   srfi-69)
 
 (include "src/math.ss")
@@ -21,7 +23,7 @@
 
   (define (render window)
     "Renders the player onto the screen."
-    (mvaddch window y x PLAYER-CHARACTER))
+    (mvwaddch window y x PLAYER-CHARACTER))
 
   (define (translate dx dy)
     "Translates the player by the provided input."
@@ -33,7 +35,7 @@
     (apply translate
            (match input
              [#\w '(0 -1)]
-             [#\s '(0, 1)]
+             [#\s '(0 1)]
              [#\a '(-1 0)]
              [#\d '(1 0)]))))
 
@@ -44,24 +46,32 @@
 (define (destroy-ncurses)
   (endwin))
 
+(define (handle-exn-ncurses window exn)
+  (wclear window)
+
+  (mvaddstr 0 0 "Encountered exception. Press any key to quit.")
+  (mvaddstr 2 2
+            (string-append "Message: " ((condition-property-accessor 'exn 'message) exn)))
+  (mvaddstr 3 2
+            (string-append "Arguments: " ))
+
+  (wrefresh window)
+  (getch)
+  (destroy-ncurses)
+  (exit 0))
+
 (define (handle-sigint signal)
   (destroy-ncurses)
   (exit 0))
 
-(define (print-sorry window)
-  (wclear window)
-  (mvaddstr 0 0 "sorry, an error occurred")
-  (wrefresh window)
-  (getch))
-
 (define (render window player)
   (wclear window)
-  (player 'render)
+  (player 'render window)
   (curs_set 0)
   (wrefresh window))
 
-(define (loop window game-state)
-  (render window game-state)
+(define (loop window player)
+  (render window player)
   (let ([input (getch)])
     (unless (equal? input #\q)
       (loop window (player 'translate-from-input input)))))
@@ -72,9 +82,10 @@
   (prepare-ncurses)
 
   (let ([window (stdscr)])
-   (condition-case (loop window (new-game-state))
-     [(exn) (print-sorry window)]
-     [var () #f]))
+    (with-exception-handler
+        (curry handle-exn-ncurses window)
+      (lambda ()
+        (loop (stdscr) (make-plyer 0 0)))))
 
   (destroy-ncurses))
 
