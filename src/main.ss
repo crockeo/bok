@@ -52,19 +52,27 @@
   (cond-expand
     (chicken-script
      (mvaddstr 0 0 "Encountered exception. Press any key to quit.")
+
      (mvaddstr 2 2
-               (string-append "Message: " ((condition-property-accessor 'exn
-                                                                        'message
-                                                                        "no message")
-                                           exn)))
+               (conc "Message: "
+                     ((condition-property-accessor 'exn
+                                                   'message
+                                                   "no message")
+                      exn)))
+
+     (mvaddstr 3 2
+               (conc "Arguments: "
+                     ((condition-property-accessor 'exn
+                                                   'arguments
+                                                   "no arguments")
+                      exn)))
 
      (mvaddstr 4 2
-               (string-append "Location: " ((condition-property-accessor 'exn
-                                                                         'location
-                                                                         "no location")
-                                            exn)))
-
-     ;; TODO: figure out how to make beter error tracing
+               (conc "Location: "
+                     ((condition-property-accessor 'exn
+                                                   'location
+                                                   "no location")
+                      exn)))
 
      (getch))
     (else))
