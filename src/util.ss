@@ -1,5 +1,7 @@
 ;; -*- geiser-scheme-implementation: 'chicken -*-
 
+(import matchable)
+
 (define (curry function . args)
   "Partially applies arguments to a function."
   (if (null? args)
@@ -47,13 +49,22 @@ into one, long symbol using the standard-multiword-symbol-form."
     [(equal? n 0) list]
     [else (drop (cdr list) (- n 1))]))
 
-
  (define (get-function-names defines)
    "Given a collection of valid function definitions, this returns the (symbol) names of each of
 those functions."
    (map
     (lambda (define) (nths define 1 0))
-    defines)))
+    defines))
+
+ (define (flatten1 list-of-lists)
+   "Flattens a single layer of a list-of-lists."
+   (let loop [(list-of-lists list-of-lists)
+              (agg (list))]
+     (if (null? list-of-lists)
+         agg
+         (loop
+          (cdr list-of-lists)
+          (append agg (car list-of-lists)))))))
 
 (define-syntax define-class
   ;; Defines a class.
@@ -77,16 +88,40 @@ those functions."
            (arguments (nth form 2))
            (body (drop form 3))
            (%join-symbols (rename join-symbols))
+           (%flatten1 (rename flatten1))
            (%get-function-names (rename get-function-names))]
        `(define (,(%join-symbols 'make name) ,@arguments)
+          ;; Automatically construct getters and setters for each argument
+          ,@(%flatten1
+             (map
+              (lambda (argument)
+                `((define (,(%join-symbols 'get argument))
+                    ,argument)
+
+                  (define (,(%join-symbols 'set argument) new-value)
+                    (,(%join-symbols 'make name)
+                     ,@(map
+                        (lambda (sub-argument)
+                          (if (equal? sub-argument argument)
+                              'new-value
+                              sub-argument))
+                        arguments)))))
+              arguments))
+
+          ;; User-defined functions
           ,@body
 
+          ;; Dispatcher that calls all of the other functions
           (define (self message . args)
             (apply
              (match message
                ,@(map (lambda (function-name)
-                       `(',function-name ,function-name))
-                     (get-function-names body)))
+                        `(',function-name ,function-name))
+                      (append (get-function-names body)
+                              (flatten1 (map (lambda (argument)
+                                               (list (%join-symbols 'get argument)
+                                                     (%join-symbols 'set argument)))
+                                             arguments)))))
              args))
 
           self)))))
