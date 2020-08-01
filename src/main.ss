@@ -2,6 +2,7 @@
 
 (import
   (chicken io)
+  (chicken process-context)
   (chicken process signal)
   (chicken string)
 
@@ -37,7 +38,8 @@
              [#\w '(0 -1)]
              [#\s '(0 1)]
              [#\a '(-1 0)]
-             [#\d '(1 0)]))))
+             [#\d '(1 0)]
+             [else '(0 0)]))))
 
 (define (prepare-ncurses)
   (initscr)
@@ -46,19 +48,28 @@
 (define (destroy-ncurses)
   (endwin))
 
-(define (handle-exn-ncurses window exn)
-  (wclear window)
+(define (handle-exn-ncurses k window exn)
+  (cond-expand
+    (chicken-script
+     (mvaddstr 0 0 "Encountered exception. Press any key to quit.")
+     (mvaddstr 2 2
+               (string-append "Message: " ((condition-property-accessor 'exn
+                                                                        'message
+                                                                        "no message")
+                                           exn)))
 
-  (mvaddstr 0 0 "Encountered exception. Press any key to quit.")
-  (mvaddstr 2 2
-            (string-append "Message: " ((condition-property-accessor 'exn 'message) exn)))
-  (mvaddstr 3 2
-            (string-append "Arguments: " ))
+     (mvaddstr 4 2
+               (string-append "Location: " ((condition-property-accessor 'exn
+                                                                         'location
+                                                                         "no location")
+                                            exn)))
 
-  (wrefresh window)
-  (getch)
-  (destroy-ncurses)
-  (exit 0))
+     ;; TODO: figure out how to make beter error tracing
+
+     (getch))
+    (else))
+
+  (k window))
 
 (define (handle-sigint signal)
   (destroy-ncurses)
@@ -81,11 +92,13 @@
 
   (prepare-ncurses)
 
-  (let ([window (stdscr)])
-    (with-exception-handler
-        (curry handle-exn-ncurses window)
-      (lambda ()
-        (loop (stdscr) (make-plyer 0 0)))))
+  (define window (stdscr))
+
+  (call/cc
+   (lambda (k)
+     (with-exception-handler
+         (curry handle-exn-ncurses k window)
+       (lambda () (loop window (make-player 0 0))))))
 
   (destroy-ncurses))
 
