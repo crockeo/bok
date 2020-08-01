@@ -5,7 +5,7 @@
 (define (make-player x y)
   (define (get-x) x)
   (define (get-y) y)
-  (define (get-xy) `(,x ,y))
+  (define (get-xy) (list x y))
 
   (define (translate dx dy)
     (make-player (+ x dx)
