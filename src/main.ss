@@ -20,7 +20,13 @@
 
 (define (prepare-ncurses)
   (initscr)
-  (cbreak))
+  (cbreak)
+  (noecho)
+  (timeout 300)
+
+  (let ([window (stdscr)])
+    (keypad window #t)
+    window))
 
 (define (destroy-ncurses)
   (endwin))
@@ -28,6 +34,8 @@
 (define (handle-exn-ncurses k window exn)
   (cond-expand
     (chicken-script
+     (timeout -1)
+
      (mvaddstr 0 0 "Encountered exception. Press any key to quit.")
 
      (mvaddstr 2 2
@@ -68,19 +76,25 @@
 
 (define (loop window state)
   (render window state)
-  (let ([input (getch)])
-    (unless (equal? input #\q)
-      (loop window (state 'update input)))))
+  (loop window (state 'update (getch))))
 
 (define (main)
   (set-signal-handler! signal/int handle-sigint)
 
-  (prepare-ncurses)
-
-  (define window (stdscr))
-  (define menu (make-menu-state '("Play"
-                                  "Credits"
-                                  "Exit") 0))
+  (define window (prepare-ncurses))
+  (define menu
+    (make-menu-state
+     (list
+      (make-menu-item
+       "Play"
+       (lambda ()
+         (make-game-state (make-player 0 0))))
+      (make-menu-item
+       "Exit"
+       (lambda ()
+         (destroy-ncurses)
+         (exit 0))))
+     0))
 
   (call/cc
    (lambda (k)

@@ -6,6 +6,10 @@
 
 (include "src/util.ss")
 
+
+(define-class menu-item (text on-select))
+
+
 (define-class menu-state (options current-index)
   (define (move-selection direction)
     (set-current-index
@@ -20,11 +24,41 @@
                   (if (equal? i current-index)
                       "> "
                       "  ")
-                  (nth options i))))
+                  ((nth options i) 'get-text))))
      (range 0 (length options))))
 
   (define (update input)
-    (match input
-      [#\w (move-selection -1)]
-      [#\s (move-selection 1)]
-      [else self])))
+    (cond
+     ((is-key input #\w KEY_UP) (move-selection -1))
+     ((is-key input #\s KEY_DOWN) (move-selection 1))
+     ;; 10 here denotes the ASCII code of the enter key
+     ((is-key input 10) (((nth options current-index) 'get-on-select)))
+     (else self))))
+
+
+(define-class player (x y)
+  (define (input-to-direction input)
+    (cond
+     [(is-key input #\w KEY_UP) '(0 -1)]
+     [(is-key input #\s KEY_DOWN) '(0 1)]
+     [(is-key input #\a KEY_LEFT) '(-1 0)]
+     [(is-key input #\d KEY_RIGHT) '(1 0)]
+     [else '(0 0)]))
+
+  (define (translate dx dy)
+    (make-player (+ x dx)
+                 (+ y dy)))
+
+  (define (render window)
+    (mvwaddch window y x #\@))
+
+  (define (update input)
+    (apply translate (input-to-direction input))))
+
+
+(define-class game-state (player)
+  (define (render window)
+    (player 'render window))
+
+  (define (update input)
+    (make-game-state (player 'update input))))

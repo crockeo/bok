@@ -20,6 +20,17 @@
         (loop (+ i 1)
               (append agg (list i))))))
 
+(define (is-key input . keys)
+  "Determines if an input (as provided by getch) is any one of the provided keys, either a char
+literal or a special key."
+  (let loop ([keys keys])
+    (cond
+     ((null? keys) #f)
+     ((or (equal? input (car keys))
+          (equal? (char->integer input) (car keys)))
+      #t)
+     (else (loop (cdr keys))))))
+
 (begin-for-syntax
  (define (string-join delimiter . strings)
    "Joins a series of strings with a given delimiter."
