@@ -1,3 +1,6 @@
+     A game about chicken
+         By @crockeo
+
  _                      _
 | |                    | |
 | |                    | |  _

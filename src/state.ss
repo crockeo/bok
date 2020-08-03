@@ -4,6 +4,7 @@
   matchable
   ncurses)
 
+(include "src/res.ss")
 (include "src/util.ss")
 
 
@@ -20,6 +21,12 @@
     (let*-values ([(max-y max-x) (getmaxyx window)]
                   [(base-y) (- (quotient max-y 2) (quotient (length options) 2))]
                   [(base-x) (quotient max-x 2)])
+
+      (let ([bok (load-multiline-text "res/bok.txt")])
+        (multiline-text-render
+         (- base-y (length bok) 2)
+         (- base-x (quotient (multiline-text-width bok) 2))
+         bok))
 
       (for (i 0 (length options))
         (let* ([option (nth options i)]
