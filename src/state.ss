@@ -17,15 +17,23 @@
              (length options))))
 
   (define (render window)
-    (map
-     (lambda (i)
-       (mvaddstr i 0
-                 (string-append
-                  (if (equal? i current-index)
-                      "> "
-                      "  ")
-                  ((nth options i) 'get-text))))
-     (range 0 (length options))))
+    (let*-values ([(max-y max-x) (getmaxyx window)]
+                  [(base-y) (- (quotient max-y 2) (quotient (length options) 2))]
+                  [(base-x) (quotient max-x 2)])
+
+      (for (i 0 (length options))
+        (let* ([option (nth options i)]
+               [s (string-append
+                   (if (equal? i current-index)
+                       "> "
+                       "  ")
+                   (option 'get-text)
+                   (if (equal? i current-index)
+                       " <"
+                       "  "))])
+          (mvaddstr (+ base-y i)
+                    (- base-x (quotient (string-length s) 2))
+                    s)))))
 
   (define (update input)
     (cond

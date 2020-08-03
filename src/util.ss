@@ -11,15 +11,6 @@
                (apply function (car args) rest))
              (cdr args))))
 
-(define (range min max)
-  "Generates a range of numbers from [min, max). I.e. min inclusive to max exclusive."
-  (let loop ([i min]
-             [agg '()])
-    (if (equal? i max)
-        agg
-        (loop (+ i 1)
-              (append agg (list i))))))
-
 (define (is-key input . keys)
   "Determines if an input (as provided by getch) is any one of the provided keys, either a char
 literal or a special key."
@@ -32,6 +23,15 @@ literal or a special key."
      (else (loop (cdr keys))))))
 
 (begin-for-syntax
+ (define (range min max)
+   "Generates a range of numbers from [min, max). I.e. min inclusive to max exclusive."
+   (let loop ([i min]
+              [agg '()])
+     (if (equal? i max)
+         agg
+         (loop (+ i 1)
+               (append agg (list i))))))
+
  (define (string-join delimiter . strings)
    "Joins a series of strings with a given delimiter."
    (let loop [(strings (cdr strings))
@@ -145,3 +145,18 @@ those functions."
              args))
 
           self)))))
+
+(define-syntax for
+  (er-macro-transformer
+   (lambda (form rename compare?)
+     (let* ([%nth (rename nth)]
+            [%drop (rename drop)]
+            [bounds (%nth form 1)]
+            [var-name (%nth bounds 0)]
+            [min (%nth bounds 1)]
+            [max (%nth bounds 2)]
+            [body (%drop form 2)])
+       `(map
+         (lambda (,var-name)
+           ,@body)
+         (range ,min ,max))))))
