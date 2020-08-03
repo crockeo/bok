@@ -2,6 +2,7 @@
 
 (import
   (chicken io)
+  (chicken port)
   (chicken process-context)
   (chicken process signal)
   (chicken string)
@@ -35,6 +36,14 @@
   (cond-expand
     (chicken-script
      (timeout -1)
+
+     (let ([exn-description (with-output-to-string
+                              (lambda ()
+                                ;; TODO:
+                                ;;   write-exception isn't a real thing here, need to extract it out
+                                ;;   of the Geiser source code
+                               (write-exception exn)))])
+       (mvaddstr 2 2 exn-description))
 
      (mvaddstr 0 0 "Encountered exception. Press any key to quit.")
 
@@ -84,6 +93,7 @@
   (define window (prepare-ncurses))
   (define menu
     (make-menu-state
+     (load-multiline-text "res/bok.txt")
      (list
       (make-menu-item
        "Play"
@@ -103,5 +113,7 @@
        (lambda () (loop window menu)))))
 
   (destroy-ncurses))
+
+;; TODO: Put exception handler closer to when we start the program
 
 (main)

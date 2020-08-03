@@ -11,7 +11,7 @@
 (define-class menu-item (text on-select))
 
 
-(define-class menu-state (options current-index)
+(define-class menu-state (bok-header options current-index)
   (define (move-selection direction)
     (set-current-index
      (modulo (+ current-index direction)
@@ -22,11 +22,10 @@
                   [(base-y) (- (quotient max-y 2) (quotient (length options) 2))]
                   [(base-x) (quotient max-x 2)])
 
-      (let ([bok (load-multiline-text "res/bok.txt")])
-        (multiline-text-render
-         (- base-y (length bok) 2)
-         (- base-x (quotient (multiline-text-width bok) 2))
-         bok))
+      (multiline-text-render
+       (- base-y (length bok-header) 2)
+       (- base-x (quotient (multiline-text-width bok-header) 2))
+       bok-header)
 
       (for (i 0 (length options))
         (let* ([option (nth options i)]
@@ -77,3 +76,35 @@
 
   (define (update input)
     (make-game-state (player 'update input))))
+
+
+;; TODO: Fix all of this
+
+
+(define-class story-state (multiline-text commentary-text next-state)
+  (define (render window)
+    (unless (null? multiline-text)
+      (multiline-text-render 1 1 multiline-text))
+
+    (let ([multiline-text-height (if (null? multiline-text)
+                                     0
+                                     (length multiline-text))])
+      (mvaddstr (+ multiline-text-height 2) 1 commentary-text)))
+
+  (define (update input)
+    (if (is-key input 10)
+        next-state
+        self)))
+
+
+(define (build-storyline game-state . story-states)
+  "Builds a storyline (collection of story states) out of a list of story states and a single,
+terminal game state."
+  (let ([story-state (car story-states)]
+        [story-states (cdr story-states)])
+    (if (null? story-states)
+        (story-state 'set-next-state game-state)
+        (story-state 'set-next-state
+                     (loop
+                      (car story-states)
+                      (cdr story-states))))))
